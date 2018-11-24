@@ -10,6 +10,11 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -22,7 +27,9 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.GeneralPath;
+import java.io.IOException;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -83,10 +90,10 @@ public abstract class LabelWidget extends JComponent {
         this.labelBeforeEdit = initLabelText;
 
         //set up textfield colors
-        textField.setForeground(Color.WHITE);//white text
-        textField.setBackground(fieldColor);//background matching block color
-        textField.setCaretColor(Color.WHITE);//white caret
-        textField.setSelectionColor(Color.BLACK);//black highlight
+        textField.setForeground(Color.BLACK);//white text
+        textField.setBackground(Color.WHITE);//background matching block color
+        textField.setCaretColor(Color.BLACK);//white caret
+        textField.setSelectionColor(Color.BLUE);//black highlight
         textField.setSelectedTextColor(Color.WHITE);//white text when highlighted
         textField.setBorder(textFieldBorder);
         textField.setMargin(textFieldBorder.getBorderInsets(textField));
@@ -399,7 +406,9 @@ public abstract class LabelWidget extends JComponent {
             KeyEvent.VK_UP, KeyEvent.VK_DOWN, KeyEvent.VK_LEFT,
             KeyEvent.VK_RIGHT, KeyEvent.VK_END, KeyEvent.VK_HOME,
             '-', KeyEvent.VK_DELETE, KeyEvent.VK_SHIFT, KeyEvent.VK_CONTROL,
-            InputEvent.SHIFT_MASK, InputEvent.SHIFT_DOWN_MASK};
+            InputEvent.SHIFT_MASK, InputEvent.SHIFT_DOWN_MASK,
+            InputEvent.CTRL_MASK, InputEvent.CTRL_DOWN_MASK, 
+            KeyEvent.VK_INSERT};
 
         /**
          * Contructs new block label text field
@@ -416,7 +425,55 @@ public abstract class LabelWidget extends JComponent {
              * for focus traversal keys.
              */
             this.setFocusTraversalKeysEnabled(false);
+            
+            this.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_INSERT, InputEvent.CTRL_MASK | InputEvent.CTRL_DOWN_MASK), copyActionListener);
+            this.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_INSERT, InputEvent.SHIFT_MASK | InputEvent.SHIFT_DOWN_MASK), pasteActionListener);
+            this.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_MASK | InputEvent.CTRL_DOWN_MASK), copyActionListener);
+            this.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_MASK | InputEvent.CTRL_DOWN_MASK), pasteActionListener);
         }
+        
+        AbstractAction pasteActionListener = new AbstractAction() {
+            public void actionPerformed(ActionEvent actionEvent) {
+        		Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        	    Transferable contents = clipboard.getContents(null);
+        	    boolean hasTransferableText = (contents != null) && contents.isDataFlavorSupported(DataFlavor.stringFlavor);
+        	    if (hasTransferableText) {
+        	    	try {
+        	    		String content = (String)contents.getTransferData(DataFlavor.stringFlavor);
+	        	        if (!content.isEmpty()) {
+	        	        	String c = BlockLabelTextField.this.getText();
+	        	        	int curpos = BlockLabelTextField.this.getCaretPosition();
+	        	        	int sstart = BlockLabelTextField.this.getSelectionStart();
+	        	        	int send = BlockLabelTextField.this.getSelectionEnd();
+	        	        	if (send!=0) {	        	        			        	        	
+	        	        		BlockLabelTextField.this.setText(c.substring(0, sstart) + content + c.substring(send));
+	        	        		BlockLabelTextField.this.setSelectionStart(0);
+	        	        		BlockLabelTextField.this.setSelectionEnd(0);
+		        	        	BlockLabelTextField.this.setCaretPosition(sstart + content.length());
+	        	        	} else {		        	        	
+		        	        	BlockLabelTextField.this.setText(c.substring(0, curpos) + content + c.substring(curpos));
+	        	        		BlockLabelTextField.this.setCaretPosition(curpos + content.length());
+	        	        	}
+	        	        }
+	        	    }
+	        	    catch (UnsupportedFlavorException ex) {
+	        	    	System.out.println(ex);
+	        		    ex.printStackTrace();
+	        	    } catch (IOException ex) {
+	        	    	System.out.println(ex);
+	        		    ex.printStackTrace();
+	        	    }
+        	    }
+            };
+        };
+        
+        AbstractAction copyActionListener = new AbstractAction() {
+            public void actionPerformed(ActionEvent actionEvent) {
+				StringSelection selec = new StringSelection(BlockLabelTextField.this.getSelectedText());
+				Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+				clipboard.setContents(selec, selec);
+            };
+        };        
 
         public void mousePressed(MouseEvent e) {
         }

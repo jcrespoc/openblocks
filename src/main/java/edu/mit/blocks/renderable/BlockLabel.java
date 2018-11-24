@@ -4,15 +4,28 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.ClipboardOwner;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.io.IOException;
 import java.util.List;
 
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+
+import org.jfree.ui.KeyedComboBoxModel;
 
 import edu.mit.blocks.codeblocks.Block;
 import edu.mit.blocks.codeblocks.BlockConnector;
@@ -33,7 +46,7 @@ import edu.mit.blocks.workspace.WorkspaceEvent;
  * for particular blocks. This white border helps to suggest editable labels for blocks that
  * have this enabled.
  */
-public class BlockLabel implements MouseListener, MouseMotionListener, KeyListener {
+public class BlockLabel implements MouseListener, MouseMotionListener, KeyListener, ClipboardOwner {
 
     /**Enum for the differnt types of labels in codeblocks */
     public enum Type {
@@ -130,7 +143,7 @@ public class BlockLabel implements MouseListener, MouseMotionListener, KeyListen
         widget.addMouseListenerToLabel(this);
         widget.addMouseMotionListenerToLabel(this);
         widget.addKeyListenerToTextField(this);
-
+        
         //set initial text
         widget.updateLabelText(initLabelText);
         //add and show the textLabel initially
@@ -364,4 +377,41 @@ public class BlockLabel implements MouseListener, MouseMotionListener, KeyListen
     @Override
     public void keyTyped(KeyEvent e) {
     }
+
+	
+	  /**
+	  * Get the String residing on the clipboard.
+	  *
+	  * @return any text found on the Clipboard; if none found, return an
+	  * empty String.
+	  */
+	  public String getClipboardContents() {
+	    String result = "";
+	    Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+	    //odd: the Object param of getContents is not currently used
+	    Transferable contents = clipboard.getContents(null);
+	    boolean hasTransferableText =
+	      (contents != null) &&
+	      contents.isDataFlavorSupported(DataFlavor.stringFlavor)
+	    ;
+	    if (hasTransferableText) {
+	      try {
+	        result = (String)contents.getTransferData(DataFlavor.stringFlavor);
+	      }
+	      catch (UnsupportedFlavorException ex) {
+		        System.out.println(ex);
+		        ex.printStackTrace();
+	      } catch (IOException ex) {
+		        System.out.println(ex);
+		        ex.printStackTrace();
+	      }
+	    }
+	    return result;
+	  }
+
+	@Override
+	public void lostOwnership(Clipboard clipboard, Transferable contents) {
+		// TODO Auto-generated method stub
+		
+	}	
 }
